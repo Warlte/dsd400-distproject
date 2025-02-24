@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<!-- Exempel för DSD400-kursen på JSON-AJAX -->
+<html>
+  <head>
+    <title>Enkelt test av JSON AJAX</title>
+    <meta charset="utf-8"/>
+</head>
+<body>
+  <h1 id="rubrik">Tomt</h1>
+  <p id="text">tomt</p>
+  <button id="ajaxButton" type="button">Make a request</button>
+
+<script>
+ (function() {
+   var httpRequest;
+   document.getElementById("ajaxButton").addEventListener('click', makeRequest);
+
+   // Körs när man trycker på knappen, skicka förfrågan
+   function makeRequest() {
+     httpRequest = new XMLHttpRequest();
+     
+     if (!httpRequest) {
+       alert('Giving up :( Cannot create an XMLHTTP instance');
+       return false;
+     }
+     httpRequest.onreadystatechange = handleResponse;
+     httpRequest.open('GET', '/api/slump');
+     httpRequest.send();
+   }
+
+   // Ta hand om JSON-svaret från servern
+   function handleResponse() {
+     // för debugging: alertContents();
+     if (httpRequest.readyState == 4 && httpRequest.status == 200) {
+       var myArr = JSON.parse(httpRequest.responseText);
+       var txtElem = document.getElementById("text");
+       if (txtElem.textContent == "tomt") {
+	 // Första gången: sätt rubrik och text
+         document.getElementById("rubrik").textContent = myArr['title'];
+	 txtElem.textContent = myArr['text'] + " " + myArr['slump'];
+       } else {
+	 // Om man trycker fler gånger, lägg enbart på slumptal
+	 txtElem.textContent += ", " + myArr['slump'];
+       }
+     }
+   }
+   
+   // Bra för debugging
+   function alertContents() {
+     if (httpRequest.readyState === XMLHttpRequest.DONE) {
+       if (httpRequest.status === 200) {
+         alert(httpRequest.responseText);
+       } else {
+         alert('There was a problem with the request.');
+       }
+     }
+   }
+ })();
+</script>
+</body>
+</html>
