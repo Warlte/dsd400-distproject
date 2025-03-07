@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Booking</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script>
+        // Function to show all flights or filter them based on selection
+        function showFlights() {
+            // Get the selected departure and destination
+            var departure = document.getElementById('departure').value;
+            var destination = document.getElementById('destination').value;
+
+            // Get all flight options
+            var allFlights = document.getElementsByClassName('flight-options');
+            
+            // If no filter is selected, show all flights
+            if (departure === "all" && destination === "all") {
+                for (var i = 0; i < allFlights.length; i++) {
+                    allFlights[i].style.display = 'block';
+                }
+            } else {
+                // Hide all flights first
+                for (var i = 0; i < allFlights.length; i++) {
+                    allFlights[i].style.display = 'none';
+                }
+
+                // Show relevant flights based on the selected departure and destination
+                var selectedFlightClass = departure + '-' + destination;
+                var selectedFlights = document.getElementsByClassName(selectedFlightClass);
+                for (var i = 0; i < selectedFlights.length; i++) {
+                    selectedFlights[i].style.display = 'block';
+                }
+            }
+        }
+    </script>
+</head>
+<body>
+
+<header>
+    <h1>Flight Booking</h1>
+    <p>Fill in the details below to find your flight.</p>
+</header>
+
+<div class="container">
+    <h2>Book Your Flight</h2>
+    <form onsubmit="event.preventDefault(); showFlights();">
+        <label for="departure">Departure City:</label>
+        <select id="departure" name="departure" required>
+            <option value="all">All</option>
+            <option value="new_york">New York</option>
+            <option value="los_angeles">Los Angeles</option>
+            <option value="chicago">Chicago</option>
+            <option value="miami">Miami</option>
+        </select>
+
+        <label for="destination">Destination City:</label>
+        <select id="destination" name="destination" required>
+            <option value="all">All</option>
+            <option value="london">London</option>
+            <option value="paris">Paris</option>
+            <option value="tokyo">Tokyo</option>
+            <option value="sydney">Sydney</option>
+        </select>
+
+        <label for="departure_date">Departure Date:</label>
+        <input type="date" id="departure_date" name="departure_date" required>
+
+        <label for="return_date">Return Date (optional):</label>
+        <input type="date" id="return_date" name="return_date">
+
+        <button type="submit">Search Flights</button>
+    </form>
+
+    <div id="flight-list">
+        <h3>Available Flights:</h3>
+        
+        <!-- Flight options for New York to London -->
+        <div class="flight-options new_york-london" style="display: block;">
+            <h4>New York to London</h4>
+            <ul>
+                <li>Flight NY001 - 10:00 AM - $500</li>
+                <li>Flight NY002 - 2:00 PM - $550</li>
+                <li>Flight NY003 - 6:00 PM - $520</li>
+            </ul>
+        </div>
+
+        <!-- Flight options for New York to Paris -->
+        <div class="flight-options new_york-paris" style="display: block;">
+            <h4>New York to Paris</h4>
+            <ul>
+                <li>Flight NY010 - 9:00 AM - $600</li>
+                <li>Flight NY011 - 12:00 PM - $650</li>
+                <li>Flight NY012 - 3:00 PM - $620</li>
+            </ul>
+        </div>
+
+        <!-- Flight options for Los Angeles to Tokyo -->
+        <div class="flight-options los_angeles-tokyo" style="display: block;">
+            <h4>Los Angeles to Tokyo</h4>
+            <ul>
+                <li>Flight LA001 - 8:00 AM - $700</li>
+                <li>Flight LA002 - 1:00 PM - $750</li>
+                <li>Flight LA003 - 4:00 PM - $720</li>
+            </ul>
+        </div>
+
+        <!-- Flight options for Miami to Sydney -->
+        <div class="flight-options miami-sydney" style="display: block;">
+            <h4>Miami to Sydney</h4>
+            <ul>
+                <li>Flight MI001 - 7:00 AM - $800</li>
+                <li>Flight MI002 - 11:00 AM - $850</li>
+                <li>Flight MI003 - 3:00 PM - $820</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
