@@ -19,7 +19,7 @@ def fetchFlightsDB():
     #innit_connection()
 
     with connection.cursor() as cursor:
-        cursor.execute("SELECT * FROM Flights")
+        cursor.execute("SELECT * FROM Flights;")
         result = cursor.fetchall()
         print(result)
         return result
@@ -58,7 +58,7 @@ def registerUser(firstName, lastName, telefon, email, password):
         with connection.cursor() as cursor:
 
             sql = "INSERT INTO Customers(FirstName, LastName, Telephone, Email, Password) VALUES (%s, %s, %s, %s, %s)"
-            cursor.execute(sql (firstName, lastName, telefon, email, password))
+            cursor.execute(sql, (firstName, lastName, telefon, email, password))
             cursor.execute("COMMIT;")
             print(f"Hello the user: {firstName} has been inserted into the database :)")
     except Exception as e:
@@ -86,26 +86,50 @@ class RequestHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path.startswith('/api'):
             self.send_response(200)
-            self.send_header('Content-type','text/json')
+            self.send_header('Content-type', 'application/json')
             self.end_headers()
+            
             if self.path.startswith('/api/getFlights'):
                 response = fetchFlightsDB()
             elif self.path.startswith('/api/login'):
                 response = getAllUsers()
             else:
                 response = {'error': 'Not implemented'}
+
             self.wfile.write(json.dumps(response).encode())
             return
-        
 
-        # Call default serving static files if not '/api'
-        # from 'html' subdirectory
-        
+        # Log the requested path
+        print(f"Original request path: {self.path}")
 
-        #hjälp mig gud jag fattar inte varför min path inte fungerar
-        self.path = 'E:/Programing/website/dsd400-distproject' + self.path
-        print("Serving file from path:", self.path)
+        # Serve static files correctly
         return super().do_GET()
+
+    def translate_path(self, path):
+        """Ensure static files are served only from the specified directory."""
+        static_root = "E:/Programing/website/dsd400-distproject/project/html"
+
+        # Remove double slashes and clean the path
+        path = os.path.normpath(path)
+
+        # Remove leading slashes to prevent issues
+        path = path.lstrip("/")
+
+        # Handle root request
+        if not path or path == ".":
+            path = "index.html"
+
+        # Join with static directory
+        file_path = os.path.join(static_root, path)
+
+        # Prevent directory traversal
+        if not os.path.abspath(file_path).startswith(os.path.abspath(static_root)):
+            print(f"Blocked unauthorized access: {file_path}")
+            return os.path.join(static_root, "index.html")  # Serve index.html instead
+
+        print(f"Serving file: {file_path}")
+        return file_path
+
     
     def do_POST(self): 
         if self.path.startswith('/api'):

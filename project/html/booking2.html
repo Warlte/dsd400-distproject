@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Booking</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<header>
+    <h1>Flight Booking</h1>
+    <p>Fill in the details below to find your flight.</p>
+</header>
+
+<div class="container">
+    <h2>Book Your Flight</h2>
+    <form id="flight-search-form">
+        <label for="departure">Departure City:</label>
+        <select id="departure" name="departure" required>
+            <option value="all">All</option>
+            <option value="New York">New York</option>
+            <option value="Los Angeles">Los Angeles</option>
+            <option value="Chicago">Chicago</option>
+            <option value="Miami">Miami</option>
+        </select>
+
+        <label for="destination">Destination City:</label>
+        <select id="destination" name="destination" required>
+            <option value="all">All</option>
+            <option value="London">London</option>
+            <option value="Paris">Paris</option>
+            <option value="Tokyo">Tokyo</option>
+            <option value="Sydney">Sydney</option>
+        </select>
+
+        <label for="departure_date">Departure Date:</label>
+        <input type="date" id="departure_date" name="departure_date" required>
+
+        <label for="return_date">Return Date (optional):</label>
+        <input type="date" id="return_date" name="return_date">
+
+        <button type="submit">Search Flights</button>
+    </form>
+
+    <div id="flight-list">
+        <h3>Available Flights:</h3>
+        <!-- Flight results will appear here -->
+    </div>
+</div>
+
+<script>
+document.getElementById('flight-search-form').addEventListener('submit', function(event) {
+    event.preventDefault();
+
+    // Get the selected departure and destination cities
+    var departure = document.getElementById('departure').value;
+    var destination = document.getElementById('destination').value;
+
+    // Construct the API URL with query parameters
+    var apiUrl = 'api/flights?departure=' + departure + '&destination=' + destination;
+
+    // Fetch the flight data from the API
+    fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+            // Clear any previous flight results
+            var flightList = document.getElementById('flight-list');
+            flightList.innerHTML = '<h3>Available Flights:</h3>';
+
+            // Check if flights are returned
+            if (data.length > 0) {
+                data.forEach(flight => {
+                    var flightDiv = document.createElement('div');
+                    flightDiv.classList.add('flight');
+                    flightDiv.innerHTML = `
+                        <h4>${flight.departure_city} to ${flight.destination_city}</h4>
+                        <ul>
+                            <li>Flight Number: ${flight.flight_number}</li>
+                            <li>Departure Time: ${flight.departure_time}</li>
+                            <li>Price: $${flight.price}</li>
+                        </ul>
+                    `;
+                    flightList.appendChild(flightDiv);
+                });
+            } else {
+                flightList.innerHTML += '<p>No flights found.</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching flight data:', error);
+        });
+});
+</script>
+
+</body>
+</html>
