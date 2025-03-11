@@ -32,6 +32,13 @@ def getAllUsers():
         print('hej')
         return result
 
+def getAllBookings():
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT * FROM Booking")
+        result = cursor.fetchall()
+        print(result)
+        return result
+
 
 def postToBookDB(name,author,genre):
     try:
@@ -46,6 +53,30 @@ def postToBookDB(name,author,genre):
         print(f"Error inserting data: {e}")
 
 
+def registerUser(firstName, lastName, telefon, email, password):
+    try:
+        with connection.cursor() as cursor:
+
+            sql = "INSERT INTO Customers(FirstName, LastName, Telephone, Email, Password) VALUES (%s, %s, %s, %s, %s)"
+            cursor.execute(sql (firstName, lastName, telefon, email, password))
+            cursor.execute("COMMIT;")
+            print(f"Hello the user: {firstName} has been inserted into the database :)")
+    except Exception as e:
+        print(f"Error inserting data: {e}")
+
+def bookFlight(flight_id, user_id):
+    try:
+        with connection.cursor() as cursor:
+
+            sql = "INSERT INTO Booking(Customer_ID, Flight_ID) VALUES (%s, %s)"
+            cursor.execute(sql (user_id, flight_id))
+            cursor.execute("COMMIT;")
+            print(f"Hello the user number {user_id} has been booked into flight {flight_id} :)")
+    except Exception as e:
+        print(f"Error inserting data: {e}")
+
+
+
 getAllUsers()
 
 
@@ -57,7 +88,7 @@ class RequestHandler(SimpleHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-type','text/json')
             self.end_headers()
-            if self.path.startswith('/api/getFligts'):
+            if self.path.startswith('/api/getFlights'):
                 response = fetchFlightsDB()
             elif self.path.startswith('/api/login'):
                 response = getAllUsers()
@@ -70,27 +101,52 @@ class RequestHandler(SimpleHTTPRequestHandler):
         # Call default serving static files if not '/api'
         # from 'html' subdirectory
         
-        self.path = 'H:/Python/distsystem/labb4/html' + self.path
+
+        #hjälp mig gud jag fattar inte varför min path inte fungerar
+        self.path = 'E:/Programing/website/dsd400-distproject' + self.path
         print("Serving file from path:", self.path)
         return super().do_GET()
     
-    def do_POST(self):
-        self.send_response(200)
-        self.send_header('Content-type','application/json')
-        self.end_headers()
-        content_len = int(self.headers['content-length'])
-        post_body = self.rfile.read(content_len)
-        test_data = json.loads(post_body)
-        #print(test_data)
+    def do_POST(self): 
+        if self.path.startswith('/api'):
+            content_len = int(self.headers['Content-Length'])
+            post_body = self.rfile.read(content_len)
+            data = json.loads(post_body)
 
-        book_name = test_data.get("name")
-        book_author = test_data.get("author")
-        book_genre = test_data.get("genre")
-        print("postar till db function <<<<<<<<<")
-        postToBookDB(book_name,book_author,book_genre)
-        response = ""
-        self.wfile.write(json.dumps(response).encode())
-        return 
+            response = {}
+
+            if self.path.startswith('/api/bookFlight'):
+                flight_id = data.get("flight_id")
+                user_id = data.get("user_id")
+                response = bookFlight(flight_id, user_id)
+
+            elif self.path.startswith('/api/register'):
+                firstName = data.get("firstName")
+                lastName = data.get("lastName")
+                telefon = data.get("telefon")
+                email = data.get("username")
+                password = data.get("password")
+                response = registerUser(firstName, lastName, telefon, email, password)
+
+            elif self.path.startswith('/api/cancelBooking'):
+                booking_id = data.get("booking_id")
+                response = cancelBooking(booking_id)
+
+            else:
+                response = {'error': 'Not implemented'}
+
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(response).encode())
+            return
+        
+        # Default response for non-API POST requests
+        self.send_response(404)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps({'error': 'Invalid endpoint'}).encode())
+
 
 try:
     #Create a web server and define the handler to manage the
