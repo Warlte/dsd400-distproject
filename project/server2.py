@@ -47,6 +47,18 @@ def registerUser(firstName, lastName, telefon, email, password):
     except Exception as e:
         return {"error": str(e)}
 
+def loginUser(email, passwd):
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(f"SELECT * FROM customers where ( 'Email' = '{email}')")
+            usr = cursor.fetchone()
+    except Exception as e:
+        return {"error": str(e)}   
+    if usr['Password'] == passwd:
+        print(usr)
+    else:
+        print("not valid passwd")
+
 def bookFlight(flight_id, user_id):
     try:
         with connection.cursor() as cursor:
@@ -82,6 +94,11 @@ def book_flight():
 def register_user():
     data = request.json
     return jsonify(registerUser(data.get("firstName"), data.get("lastName"), data.get("telefon"), data.get("username"), data.get("password")))
+
+@app.route('/api/login', methods=['POST'])
+def login_user():
+    data = request.json
+    return jsonify(loginUser(data.get("Email"),data.get("Password")))
 
 if __name__ == '__main__':
     app.run(host='localhost', port=8020, debug=True)
