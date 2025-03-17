@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, render_template
 import pymysql.cursors
+import bcrypt  # For password hashing
 
 app = Flask(__name__)
 
@@ -39,9 +40,11 @@ def postToBookDB(name, author, genre):
 
 def registerUser(firstName, lastName, telefon, email, password):
     try:
+        # Hash the password before storing it
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
         with connection.cursor() as cursor:
             sql = "INSERT INTO Customers (FirstName, LastName, Telephone, Email, Password) VALUES (%s, %s, %s, %s, %s)"
-            cursor.execute(sql, (firstName, lastName, telefon, email, password))
+            cursor.execute(sql, (firstName, lastName, telefon, email, hashed_password))
             connection.commit()
             return {"message": f"User {firstName} registered successfully."}
     except Exception as e:
@@ -54,6 +57,19 @@ def bookFlight(flight_id, user_id):
             cursor.execute(sql, (user_id, flight_id))
             connection.commit()
             return {"message": f"User {user_id} booked flight {flight_id} successfully."}
+    except Exception as e:
+        return {"error": str(e)}
+
+def loginUser(email, password):
+    try:
+        with connection.cursor() as cursor:
+            sql = "SELECT * FROM Customers WHERE Email = %s"
+            cursor.execute(sql, (email,))
+            user = cursor.fetchone()
+            if user and bcrypt.checkpw(password.encode('utf-8'), user['Password'].encode('utf-8')):
+                return {"message": "Login successful", "user": user}
+            else:
+                return {"error": "Invalid email or password"}
     except Exception as e:
         return {"error": str(e)}
 
@@ -81,7 +97,12 @@ def book_flight():
 @app.route('/api/register', methods=['POST'])
 def register_user():
     data = request.json
-    return jsonify(registerUser(data.get("firstName"), data.get("lastName"), data.get("telefon"), data.get("username"), data.get("password")))
+    return jsonify(registerUser(data.get("firstName"), data.get("lastName"), data.get("telefon"), data.get("email"), data.get("password")))
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.json
+    return jsonify(loginUser(data.get("email"), data.get("password")))
 
 if __name__ == '__main__':
     app.run(host='localhost', port=8020, debug=True)
