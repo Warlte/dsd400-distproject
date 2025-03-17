@@ -60,6 +60,16 @@ def bookFlight(flight_id, user_id):
     except Exception as e:
         return {"error": str(e)}
 
+
+def fillFlights():
+    try:
+        with connection.cursor() as cursor:
+            pass
+        except Exception as e:
+            return {"error":str(e)}
+
+
+
 def loginUser(email, password):
     try:
         with connection.cursor() as cursor:
@@ -72,6 +82,7 @@ def loginUser(email, password):
                 return {"error": "Invalid email or password"}
     except Exception as e:
         return {"error": str(e)}
+
 
 @app.route('/')
 def index():
