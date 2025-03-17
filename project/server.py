@@ -2,6 +2,9 @@ from flask import Flask, request, jsonify, render_template
 import pymysql.cursors
 import bcrypt  # For password hashing
 
+# pip install flask
+# pip install bcrypt
+
 app = Flask(__name__)
 
 connection = pymysql.connect(
@@ -65,8 +68,8 @@ def fillFlights():
     try:
         with connection.cursor() as cursor:
             pass
-        except Exception as e:
-            return {"error":str(e)}
+    except Exception as e:
+        return {"error":str(e)}
 
 
 
