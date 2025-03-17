@@ -65,8 +65,8 @@ def fillFlights():
     try:
         with connection.cursor() as cursor:
             pass
-        except Exception as e:
-            return {"error":str(e)}
+    except Exception as e:
+        return {"error":str(e)}
 
 
 
@@ -87,6 +87,11 @@ def loginUser(email, password):
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.form  # Use request.form for form data
+    return jsonify(loginUser(data.get("email"), data.get("password")))
 
 @app.route('/api/getFlights', methods=['GET'])
 def get_flights():
