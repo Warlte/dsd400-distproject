@@ -60,15 +60,12 @@ def bookFlight(flight_id, user_id):
     except Exception as e:
         return {"error": str(e)}
 
-
 def fillFlights():
     try:
         with connection.cursor() as cursor:
             pass
     except Exception as e:
-        return {"error":str(e)}
-
-
+        return {"error": str(e)}
 
 def loginUser(email, password):
     try:
@@ -83,15 +80,28 @@ def loginUser(email, password):
     except Exception as e:
         return {"error": str(e)}
 
-
 @app.route('/')
 def index():
     return render_template('index.html')
 
+@app.route('/login')
+def login_page():
+    return render_template('login.html')
+
 @app.route('/api/login', methods=['POST'])
 def login():
-    data = request.form  # Use request.form for form data
-    return jsonify(loginUser(data.get("email"), data.get("password")))
+    if request.is_json:
+        # Handle JSON data
+        data = request.json
+        email = data.get("email")
+        password = data.get("password")
+    else:
+        # Handle form data
+        data = request.form
+        email = data.get("email")
+        password = data.get("password")
+    
+    return jsonify(loginUser(email, password))
 
 @app.route('/api/getFlights', methods=['GET'])
 def get_flights():
@@ -114,11 +124,6 @@ def book_flight():
 def register_user():
     data = request.json
     return jsonify(registerUser(data.get("firstName"), data.get("lastName"), data.get("telefon"), data.get("email"), data.get("password")))
-
-@app.route('/api/login', methods=['POST'])
-def login():
-    data = request.json
-    return jsonify(loginUser(data.get("email"), data.get("password")))
 
 if __name__ == '__main__':
     app.run(host='localhost', port=8020, debug=True)
