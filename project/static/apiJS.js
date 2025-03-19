@@ -26,16 +26,19 @@ function asignDB(){
 
             // Create cells in the row and set their content from JSON data
             var cell1 = row.insertCell(0);
-            cell1.textContent = myArr[i].bokId;
+            cell1.textContent = myArr[i].Airport_name;
 
             var cell2 = row.insertCell(1);
-            cell2.textContent = myArr[i].Namn;
+            cell2.textContent = myArr[i].Destination;
 
             var cell3 = row.insertCell(2);
-            cell3.textContent = myArr[i].Author;
+            cell3.textContent = myArr[i].Company;
 
             var cell4 = row.insertCell(3);
-            cell4.textContent = myArr[i].Genre;
+            cell4.textContent = myArr[i].Dep_time;
+            
+            var cell5 = row.insertCell(4);
+            cell5.textContent = myArr[i].Seats
         }
     } else if (httpRequest.readyState === 4) {
         console.error('Request failed');
