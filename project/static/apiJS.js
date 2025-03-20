@@ -39,8 +39,41 @@ function asignDB(){
             
             var cell5 = row.insertCell(4);
             cell5.textContent = myArr[i].Seats
+
+            var cell6 = row.insertCell(5);
+            var button = document.createElement("button");
+            button.textContent = "Book Flight";
+            button.setAttribute("data-flight-id", myArr[i].Flight_ID);
+
+            button.addEventListener("click", function() {
+                var flightId = this.getAttribute("data-flight-id");
+                fetchSeatsAndRedirect(flightId); // Call a function to handle booking
+            });
+            cell6.appendChild(button);
         }
     } else if (httpRequest.readyState === 4) {
         console.error('Request failed');
     }
+
+    
+}
+
+function fetchSeatsAndRedirect(flightId) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/getSeats", true);
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+            var response = JSON.parse(xhr.responseText);
+            if (response.seats) {
+                // Redirect to the bookseats.html page with the number of seats as a query parameter
+                window.location.href = `/bookseats?seats=${response.seats}`;
+            } else {
+                alert("Failed to fetch seat information: " + response.error);
+            }
+        } else if (xhr.readyState === 4) {
+            alert("Failed to fetch seat information: " + xhr.responseText);
+        }
+    };
+    xhr.send(JSON.stringify({ flight_id: flightId }));
 }

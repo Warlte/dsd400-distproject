@@ -80,7 +80,7 @@ def fillFlights():
     try:
         with connection.cursor() as cursor:
             sql = """
-            SELECT Flights.Destination, Flights.Dep_time, Airplanes.Company, Airplanes.Seats, Airport.Airport_name 
+            SELECT Flights.Destination, Flights.Dep_time, Flights.Flight_ID, Airplanes.Company, Airplanes.Seats, Airport.Airport_name 
             FROM Flights 
             INNER JOIN Airplanes ON Flights.Plane_ID = Airplanes.Plane_ID 
             INNER JOIN Airport ON Flights.Start_ID = Airport.Airport_ID
@@ -105,16 +105,56 @@ def loginUser(email, password):
                 return {"error": "Invalid email or password"}
     except Exception as e:
         return {"error": str(e)}
-
+#tidigare kod för get seats
+'''
+def get_seats(flight_id):
+    try:
+        with connection.cursor() as cursor:
+            sql = "SELECT Airplanes.Seats FROM Flights INNER JOIN Airplanes ON %s = Airplanes.Plane_ID"
+            cursor.execute(sql, (flight_id,))
+            result = cursor.fetchone()
+            if result:
+                return jsonify({"seats": result["Seats"]})
+            else:
+                return jsonify({"error": "Flight not found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+'''
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
+@app.route('/bookseats')
+def book_seats():
+    seats = request.args.get("seats")
+    return render_template('bookSeats.html', seats=seats)
+
+@app.route('/api/getSeats', methods=['POST'])
+def get_seats():
+    data = request.json
+    flight_id = data.get("flight_id")
+    try:
+        with connection.cursor() as cursor:
+            sql = "SELECT Airplanes.Seats FROM Flights INNER JOIN Airplanes ON %s = Airplanes.Plane_ID"
+            cursor.execute(sql, (flight_id,))
+            result = cursor.fetchone()
+            if result:
+                return jsonify({"seats": result["Seats"]})
+            else:
+                return jsonify({"error": "Flight not found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 '''
 @app.route('/api/getFlights', methods=['GET'])
 def get_flights():
     return jsonify(fetchFlightsDB())
+
+@app.route('/api/getSeats', methods=['POST'])
+def getflights():
+    data = request.json
+    return jsonify(get_seats(data.get("flight_id")))
 '''
 
 @app.route('/api/getUsers', methods=['GET'])
