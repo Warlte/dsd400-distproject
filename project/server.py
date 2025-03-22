@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, redirect, request, jsonify, render_template
 import pymysql.cursors
 import bcrypt  # For password hashing
 
@@ -128,6 +128,10 @@ def index():
 @app.route('/bookseats')
 def book_seats():
     seats = request.args.get("seats")
+    if seats is not None and seats.isdigit():  # Check if seats is a valid number
+        seats = int(seats)  # Convert to integer
+    else:
+        return "Invalid number of seats", 400  # Return an error if seats is not a valid number
     return render_template('bookSeats.html', seats=seats)
 
 @app.route('/api/getSeats', methods=['POST'])
@@ -160,6 +164,13 @@ def getflights():
 @app.route('/api/getUsers', methods=['GET'])
 def get_users():
     return jsonify(getAllUsers())
+
+@app.route('/submit-booking', methods=['POST'])
+def submit_booking():
+    selected_seats = request.form.getlist('selected_seats')  # Get all selected seats
+    print(f"Selected seats: {selected_seats}")  # Debugging: Print selected seats
+    # Add your logic here to save the selected seats to the database
+    return redirect('index.html')  # Redirect to the homepage or a confirmation page
 
 @app.route('/api/getBookings', methods=['GET'])
 def get_bookings():
