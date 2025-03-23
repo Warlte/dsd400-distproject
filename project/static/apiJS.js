@@ -1,9 +1,60 @@
-window.onload = requestDB;
-function requestDB(){
-    httpRequest = new XMLHttpRequest();
-    console.log("hello world")
+window.onload = function () {
+    checkLoginStatus();
+    requestDB();
+};
 
-    if (!httpRequest){
+function checkLoginStatus() {
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", "/api/check_login", true);
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+            var response = JSON.parse(xhr.responseText);
+            if (response.logged_in) {
+                // User is logged in
+                console.log("User is logged in:", response.user);
+                updateUIForLoggedInUser(response.user);
+            } else {
+                // User is not logged in
+                console.log("User is not logged in");
+                updateUIForLoggedOutUser();
+            }
+        } else if (xhr.readyState === 4) {
+            console.error("Failed to check login status");
+        }
+    };
+    xhr.send();
+}
+
+function updateUIForLoggedInUser(user) {
+    // Update the UI to reflect that the user is logged in
+    var loginButton = document.getElementById("loginButton");
+    var registerButton = document.getElementById("registerButton");
+    var userInfo = document.getElementById("userInfo");
+
+    if (loginButton) loginButton.style.display = "none";
+    if (registerButton) registerButton.style.display = "none";
+    if (userInfo) {
+        userInfo.style.display = "block";
+        userInfo.textContent = `Welcome, ${user.firstName} ${user.lastName}`;
+    }
+}
+
+function updateUIForLoggedOutUser() {
+    // Update the UI to reflect that the user is not logged in
+    var loginButton = document.getElementById("loginButton");
+    var registerButton = document.getElementById("registerButton");
+    var userInfo = document.getElementById("userInfo");
+
+    if (loginButton) loginButton.style.display = "block";
+    if (registerButton) registerButton.style.display = "block";
+    if (userInfo) userInfo.style.display = "none";
+}
+
+function requestDB() {
+    var httpRequest = new XMLHttpRequest();
+    console.log("hello world");
+
+    if (!httpRequest) {
         alert('Giving up');
         return false;
     }
@@ -12,17 +63,17 @@ function requestDB(){
     httpRequest.send();
 }
 
-function asignDB(){
-     // Check if the request is complete and successful
-     if (httpRequest.readyState === 4 && httpRequest.status === 200) {
+function asignDB() {
+    // Check if the request is complete and successful
+    if (httpRequest.readyState === 4 && httpRequest.status === 200) {
         var myArr = JSON.parse(httpRequest.responseText);
-        console.log("jag började asignDB")
+        console.log("jag började asignDB");
         // Get the table element
         var table = document.getElementById("FlightsTabel");
 
         // Loop through the JSON array and create rows for each book
         for (var i = 0; i < myArr.length; i++) {
-            var row = table.insertRow();  // Insert a new row at the end of the table
+            var row = table.insertRow(); // Insert a new row at the end of the table
 
             // Create cells in the row and set their content from JSON data
             var cell1 = row.insertCell(0);
@@ -36,16 +87,16 @@ function asignDB(){
 
             var cell4 = row.insertCell(3);
             cell4.textContent = myArr[i].Dep_time;
-            
+
             var cell5 = row.insertCell(4);
-            cell5.textContent = myArr[i].Seats
+            cell5.textContent = myArr[i].Seats;
 
             var cell6 = row.insertCell(5);
             var button = document.createElement("button");
             button.textContent = "Book Flight";
             button.setAttribute("data-flight-id", myArr[i].Flight_ID);
 
-            button.addEventListener("click", function() {
+            button.addEventListener("click", function () {
                 var flightId = this.getAttribute("data-flight-id");
                 fetchSeatsAndRedirect(flightId); // Call a function to handle booking
             });
@@ -54,15 +105,13 @@ function asignDB(){
     } else if (httpRequest.readyState === 4) {
         console.error('Request failed');
     }
-
-    
 }
 
 function fetchSeatsAndRedirect(flightId) {
     var xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/getSeats", true);
     xhr.setRequestHeader("Content-Type", "application/json");
-    xhr.onreadystatechange = function() {
+    xhr.onreadystatechange = function () {
         if (xhr.readyState === 4 && xhr.status === 200) {
             var response = JSON.parse(xhr.responseText);
             if (response.seats) {

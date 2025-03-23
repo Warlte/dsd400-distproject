@@ -53,6 +53,7 @@ def registerUser(firstName, lastName, telefon, email, password):
             return {"message": f"User {firstName} registered successfully."}
     except Exception as e:
         return {"error": str(e)}
+    
 
 def bookFlight(flight_id, user_id):
     try:
@@ -113,29 +114,34 @@ def login():
         email = request.form.get('email')
         password = request.form.get('password')
 
-        # Fetch user from the database
-        with connection.cursor() as cursor:
-            sql = "SELECT * FROM Customers WHERE Email = %s"
-            cursor.execute(sql, (email,))
-            user = cursor.fetchone()
+        try:
+            # Get a new database connection
+            connection = get_db_connection()
+            print("Database connection established successfully")
 
-        # Validate user and password
-        if user:
-            # Ensure the stored password is in bytes
-            stored_password = user['Password'].encode('utf-8')  # Encode to bytes
-            if bcrypt.checkpw(password.encode('utf-8'), stored_password):
+            with connection.cursor() as cursor:
+                sql = "SELECT * FROM Customers WHERE Email = %s"
+                cursor.execute(sql, (email,))
+                user = cursor.fetchone()
+
+            # Validate user and password
+            if user and bcrypt.checkpw(password.encode('utf-8'), user['Password'].encode('utf-8')):
                 # Store user ID in the session
                 session['user_id'] = user['Customer_ID']
                 session['email'] = user['Email']
-                print(f"Logged in as {session['user_id']}, with the email {session['email']}")
-                return redirect(url_for('index'))  # Redirect to a dashboard or home page
+                return redirect(url_for('dashboard'))  # Redirect to a dashboard or home page
             else:
                 return "Invalid email or password", 401  # Return an error message
-        else:
-            return "User not found", 404
-
-    # Render the login page for GET requests
-    return render_template('login.html')
+        except Exception as e:
+            print(f"An error occurred: {str(e)}")
+            return f"An error occurred: {str(e)}", 500
+        finally:
+            # Close the database connection
+            if connection:
+                connection.close()
+                print("Database connection closed")
+    else:
+        return render_template('login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register_user():
@@ -159,6 +165,28 @@ def register_user():
         return redirect(url_for('login'))  # Redirect to login after registration
 
     return render_template('register.html')
+
+@app.route('/api/check_login', methods=['GET'])
+def check_login():
+    if 'user_id' in session:
+        # Fetch user details from the database
+        with connection.cursor() as cursor:
+            sql = "SELECT * FROM Customers WHERE Customer_ID = %s"
+            cursor.execute(sql, (session['user_id'],))
+            user = cursor.fetchone()
+
+        if user:
+            return jsonify({
+                "logged_in": True,
+                "user": {
+                    "id": user['Customer_ID'],
+                    "email": user['Email'],
+                    "firstName": user['FirstName'],
+                    "lastName": user['LastName']
+                }
+            })
+    return jsonify({"logged_in": False})
+
 
 @app.route('/dashboard')
 def dashboard():
