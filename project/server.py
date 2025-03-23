@@ -92,7 +92,6 @@ def fillFlights():
     except Exception as e:
         return {"error": str(e)}
 
-
 def loginUser(email, password):
     try:
         with connection.cursor() as cursor:
@@ -105,25 +104,12 @@ def loginUser(email, password):
                 return {"error": "Invalid email or password"}
     except Exception as e:
         return {"error": str(e)}
-#tidigare kod för get seats
-'''
-def get_seats(flight_id):
-    try:
-        with connection.cursor() as cursor:
-            sql = "SELECT Airplanes.Seats FROM Flights INNER JOIN Airplanes ON %s = Airplanes.Plane_ID"
-            cursor.execute(sql, (flight_id,))
-            result = cursor.fetchone()
-            if result:
-                return jsonify({"seats": result["Seats"]})
-            else:
-                return jsonify({"error": "Flight not found"}), 404
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-'''
+      
 
 @app.route('/')
 def index():
     return render_template('index.html')
+
 
 @app.route('/bookseats')
 def book_seats():
@@ -151,6 +137,7 @@ def get_seats():
         return jsonify({"error": str(e)}), 500
 
 '''
+
 @app.route('/api/getFlights', methods=['GET'])
 def get_flights():
     return jsonify(fetchFlightsDB())
@@ -190,11 +177,6 @@ def book_flight():
 def register_user():
     data = request.json
     return jsonify(registerUser(data.get("firstName"), data.get("lastName"), data.get("telefon"), data.get("email"), data.get("password")))
-
-@app.route('/api/login', methods=['POST'])
-def login():
-    data = request.json
-    return jsonify(loginUser(data.get("email"), data.get("password")))
 
 if __name__ == '__main__':
     app.run(host='localhost', port=8020, debug=True)

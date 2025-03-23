@@ -69,7 +69,7 @@
 						<div class="col-sm-2">
 							<div class="logo">
 								<a>
-									Easy<span>Travel</span>
+									Easy<span>Travel</span> <a href="templates/login.html" a>
 								</a>
 							</div><!-- /.logo-->
 						</div><!-- /.col-->
@@ -82,19 +82,15 @@
 										<i class="fa fa-bars"></i>
 									</button><!-- / button-->
 								</div><!-- /.navbar-header-->
-								<div class="collapse navbar-collapse">		  
-									<ul class="nav navbar-nav navbar-right">
-										<li class="smooth-menu"><a href="#home">home</a></li>
-										<li>
-											<button class="book-btn">login
-											</button>
-										</li><!--Login Button--> 
-										<li>
-											<button class="book-btn">Register
-											</button>
-										</li><!--Register Button--> 
-									</ul>
-								</div><!-- /.navbar-collapse -->
+								<ul class="nav navbar-nav navbar-right">
+									<li class="smooth-menu"><a href="#home">home</a></li>
+									<li>
+										<a href="{{ url_for('login_page') }}" class="book-btn">Login</a>
+									</li><!--Login Button--> 
+									<li>
+										<button class="book-btn">Register</button>
+									</li><!--Register Button--> 
+								</ul>
 							</div><!-- /.main-menu-->
 						</div><!-- /.col-->
 					</div><!-- /.row -->
