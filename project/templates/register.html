@@ -9,18 +9,28 @@
 <body>
   <div class="wrapper">
     <h2>Login</h2>
-    <form action="{{ url_for('login') }}" method="POST">
+    <form action="{{ url_for('register_user') }}" method="POST">  
+      <div class="input-box">
+        <input type="text" name="firstName" placeholder="Enter your first name" required>
+      </div>
+      <div class="input-box">
+        <input type="text" name="lastName" placeholder="Enter your last name" required>
+      </div>
+      <div class="input-box">
+        <input type="number" name="telefon" placeholder="Enter your Phone number" required>
+      </div>
       <div class="input-box">
         <input type="email" name="email" placeholder="Enter your email" required>
       </div>
       <div class="input-box">
         <input type="password" name="password" placeholder="Enter your password" required>
       </div>
+
       <div class="input-box button">
-        <input type="submit" value="Login">
+        <input type="submit" value="Regsiter">
       </div>
       <div class="text">
-        <h3>Don't have an account? <a href="{{ url_for('register_user') }}">Register now</a></h3>
+        <h3>Already have an account? <a href="{{ url_for('login') }}">LOGIN</a></h3>
       </div>
     </form>
   </div>

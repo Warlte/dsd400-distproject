@@ -268,8 +268,8 @@ html,body{
     border-top:2px solid #fff;
 }
 
-/*book-btn*/
-.book-btn {
+/*login-btn*/
+.login-btn {
 	background: #00d8ff;
     border: 1px solid #00d8ff;
     width: 120px;
@@ -287,11 +287,11 @@ html,body{
     -o-transition: 0.5s ease-in-out;
     transition: 0.5s ease-in-out;
 }
-.book-btn:hover{
+.login-btn:hover{
     color: #fff;
     background: #00d8d5;
     border: 1px solid #00d8d5;
-}/*book-btn*/
+}/*login-btn*/
 
 /*-------------------------------------
 		3. 	About

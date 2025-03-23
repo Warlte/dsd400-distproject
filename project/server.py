@@ -1,4 +1,4 @@
-from flask import Flask, redirect, request, jsonify, render_template
+from flask import Flask, redirect, request, jsonify, render_template, url_for, session
 import pymysql.cursors
 import bcrypt  # For password hashing
 
@@ -6,6 +6,7 @@ import bcrypt  # For password hashing
 # pip install bcrypt
 
 app = Flask(__name__)
+app.secret_key = 'your_secret_key_here'  # Replace with a secure secret key
 
 connection = pymysql.connect(
     host='database-2.cx8goywsq9y4.eu-north-1.rds.amazonaws.com',
@@ -92,24 +93,93 @@ def fillFlights():
     except Exception as e:
         return {"error": str(e)}
 
-def loginUser(email, password):
-    try:
-        with connection.cursor() as cursor:
-            sql = "SELECT * FROM Customers WHERE Email = %s"
-            cursor.execute(sql, (email,))
-            user = cursor.fetchone()
-            if user and bcrypt.checkpw(password.encode('utf-8'), user['Password'].encode('utf-8')):
-                return {"message": "Login successful", "user": user}
-            else:
-                return {"error": "Invalid email or password"}
-    except Exception as e:
-        return {"error": str(e)}
-      
 
+      
 @app.route('/')
 def index():
     return render_template('index.html')
 
+@app.route('/')
+def login_page():
+    return render_template('login.html')
+
+@app.route('/')
+def register_page():
+    return render_template('register.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+
+        # Fetch user from the database
+        with connection.cursor() as cursor:
+            sql = "SELECT * FROM Customers WHERE Email = %s"
+            cursor.execute(sql, (email,))
+            user = cursor.fetchone()
+
+        # Validate user and password
+        if user:
+            # Ensure the stored password is in bytes
+            stored_password = user['Password'].encode('utf-8')  # Encode to bytes
+            if bcrypt.checkpw(password.encode('utf-8'), stored_password):
+                # Store user ID in the session
+                session['user_id'] = user['Customer_ID']
+                session['email'] = user['Email']
+                print(f"Logged in as {session['user_id']}, with the email {session['email']}")
+                return redirect(url_for('index'))  # Redirect to a dashboard or home page
+            else:
+                return "Invalid email or password", 401  # Return an error message
+        else:
+            return "User not found", 404
+
+    # Render the login page for GET requests
+    return render_template('login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register_user():
+    if request.method == 'POST':
+        firstName = request.form.get('firstName')
+        lastName = request.form.get('lastName')
+        telefon = request.form.get('telefon')
+        email = request.form.get('email')
+        password = request.form.get('password')
+
+        # Hash the password
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        hashed_password_str = hashed_password.decode('utf-8')  # Convert to string for storage
+
+        # Insert user into the database
+        with connection.cursor() as cursor:
+            sql = "INSERT INTO Customers (FirstName, LastName, Telephone, Email, Password) VALUES (%s, %s, %s, %s, %s)"
+            cursor.execute(sql, (firstName, lastName, telefon, email, hashed_password_str))
+            connection.commit()
+
+        return redirect(url_for('login'))  # Redirect to login after registration
+
+    return render_template('register.html')
+
+@app.route('/dashboard')
+def dashboard():
+    # Check if the user is logged in
+    if 'user_id' not in session:
+        return redirect(url_for('login'))  # Redirect to login if not authenticated
+
+    # Fetch user details from the database
+    with connection.cursor() as cursor:
+        sql = "SELECT * FROM Customers WHERE Customer_ID = %s"
+        cursor.execute(sql, (session['user_id'],))
+        user = cursor.fetchone()
+
+    return render_template('dashboard.html', user=user)
+
+@app.route('/logout')
+def logout():
+    # Clear the session
+    session.pop('user_id', None)
+    session.pop('email', None)
+    return redirect(url_for('login'))
 
 @app.route('/bookseats')
 def book_seats():
@@ -173,10 +243,6 @@ def book_flight():
     data = request.json
     return jsonify(bookFlight(data.get("flight_id"), data.get("user_id")))
 
-@app.route('/api/register', methods=['POST'])
-def register_user():
-    data = request.json
-    return jsonify(registerUser(data.get("firstName"), data.get("lastName"), data.get("telefon"), data.get("email"), data.get("password")))
 
 if __name__ == '__main__':
     app.run(host='localhost', port=8020, debug=True)

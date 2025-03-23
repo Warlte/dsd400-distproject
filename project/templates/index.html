@@ -85,10 +85,10 @@
 								<ul class="nav navbar-nav navbar-right">
 									<li class="smooth-menu"><a href="#home">home</a></li>
 									<li>
-										<a href="{{ url_for('login_page') }}" class="book-btn">Login</a>
+										<a href="{{ url_for('login') }}" class="login-btn">Login</a>
 									</li><!--Login Button--> 
 									<li>
-										<button class="book-btn">Register</button>
+										<a class="login-btn" href="{{url_for('register_user')}}">Register</a>
 									</li><!--Register Button--> 
 								</ul>
 							</div><!-- /.main-menu-->
