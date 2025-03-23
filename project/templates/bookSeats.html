@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Seats</title>
+    <style>
+        .seat-checkbox {
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Book Seats</h1>
+    <p>Number of available seats: {{ seats }}</p>
+    <form action="/submit-booking" method="POST">
+        <h2>Select Seats:</h2>
+        {% for seat_number in range(1, seats + 1) %}
+            <label class="seat-checkbox">
+                <input type="checkbox" name="selected_seats" value="{{ seat_number }}">
+                Seat {{ seat_number }}
+            </label>
+        {% endfor %}
+        <br><br>
+        <button type="submit">Submit Booking</button>
+    </form>
+</body>
+</html>
