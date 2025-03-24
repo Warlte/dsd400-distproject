@@ -1,3 +1,4 @@
+from functools import wraps
 from flask import Flask, redirect, request, jsonify, render_template, url_for, session
 import pymysql.cursors
 import bcrypt  # For password hashing
@@ -32,6 +33,14 @@ def getAllBookings():
         cursor.execute("SELECT * FROM Booking")
         return cursor.fetchall()
 
+def doxuser():
+    with connection.cursor() as cursor:
+        sql = "SELECT Firstname FROM Customers WHERE Customer_ID = %s"
+        cursor.execute(sql, (session['user_id'],))
+        user = cursor.fetchone()
+        return user
+
+
 def postToBookDB(name, author, genre):
     try:
         with connection.cursor() as cursor:
@@ -64,6 +73,13 @@ def bookFlight(flight_id, user_id):
     except Exception as e:
         return {"error": str(e)}
 
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))  # Redirect to login page if not logged in
+        return f(*args, **kwargs)
+    return decorated_function
 '''
 def fillFlights():
     try:
@@ -93,11 +109,35 @@ def fillFlights():
     except Exception as e:
         return {"error": str(e)}
 
+def fetch_booked_flights(user_id):
+    try:
+        with connection.cursor() as cursor:
+            sql = """
+            SELECT Flights.Flight_ID, Flights.Destination, Flights.Dep_time, Airplanes.Company, Airplanes.Seats, Airport.Airport_name 
+            FROM Booking 
+            INNER JOIN Flights ON Booking.Flight_ID = Flights.Flight_ID 
+            INNER JOIN Airplanes ON Flights.Plane_ID = Airplanes.Plane_ID 
+            INNER JOIN Airport ON Flights.Start_ID = Airport.Airport_ID 
+            WHERE Booking.Customer_ID = %s
+            """
+            cursor.execute(sql, (user_id,))
+            booked_flights = cursor.fetchall()
+            return booked_flights
+    except Exception as e:
+        return {"error": str(e)}
 
-      
+
+
+
+
 @app.route('/')
 def index():
-    return render_template('index.html')
+    user_name = None
+    if 'user_id' in  session:
+        user = doxuser()
+        if user:
+            user_name = user['Firstname']
+    return render_template('index.html', user_name = user_name)
 
 @app.route('/')
 def login_page():
@@ -106,6 +146,18 @@ def login_page():
 @app.route('/')
 def register_page():
     return render_template('register.html')
+
+
+@app.route('/my-flights')
+@login_required
+def my_flights():
+    user_id = session['user_id']  # Get the logged-in user's ID from the session
+    booked_flights = fetch_booked_flights(user_id)  # Fetch booked flights for the user
+
+    if isinstance(booked_flights, dict) and "error" in booked_flights:
+        return booked_flights["error"], 500  # Return error if something went wrong
+
+    return render_template('my_flights.html', flights=booked_flights)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -175,6 +227,7 @@ def dashboard():
     return render_template('dashboard.html', user=user)
 
 @app.route('/logout')
+@login_required
 def logout():
     # Clear the session
     session.pop('user_id', None)
