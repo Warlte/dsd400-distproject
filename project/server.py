@@ -113,7 +113,7 @@ def fetch_booked_flights(user_id):
     try:
         with connection.cursor() as cursor:
             sql = """
-            SELECT Flights.Flight_ID, Flights.Destination, Flights.Dep_time, Airplanes.Company, Airplanes.Seats, Airport.Airport_name 
+            SELECT Flights.Flight_ID, Flights.Destination, Flights.Dep_time, Airplanes.Company, Booking.Seat, Booking.Booking_ID, Airport.Airport_name 
             FROM Booking 
             INNER JOIN Flights ON Booking.Flight_ID = Flights.Flight_ID 
             INNER JOIN Airplanes ON Flights.Plane_ID = Airplanes.Plane_ID 
@@ -133,11 +133,13 @@ def fetch_booked_flights(user_id):
 @app.route('/')
 def index():
     user_name = None
+    booked_flights = None
     if 'user_id' in  session:
         user = doxuser()
+        booked_flights = fetch_booked_flights(session['user_id'])
         if user:
             user_name = user['Firstname']
-    return render_template('index.html', user_name = user_name)
+    return render_template('index.html', user_name = user_name, booked_flights = booked_flights)
 
 @app.route('/')
 def login_page():

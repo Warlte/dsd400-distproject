@@ -128,9 +128,7 @@
 
 									</h2>
 									<div class="about-btn">
-										<button  class="about-view">
-											explore now
-										</button>
+										
 									</div><!--/.about-btn-->
 								</div><!--/.about-us-txt-->
 							</div><!--/.single-about-us-->
@@ -167,18 +165,41 @@
         <!--service start-->
 		<section id="service" class="service">
 			<h2>your flights</h2>
-			<table id="FlightsTabel"class="flighttable">
+			<table id="BookedFlightsTable" class="flighttable">
 				<tr>
 					<th>Airport</th>
 					<th>Destination</th>
 					<th>Company</th>
 					<th>Departure Time</th>
-					<th>Seats</th>
-					<th></th>
+					<th>Seat</th>
 				</tr>
+				{% if booked_flights %}
+					{% for flight in booked_flights %}
+					<tr>
+						<td>{{ flight.Airport_name }}</td>
+						<td>{{ flight.Destination }}</td>
+						<td>{{ flight.Company }}</td>
+						<td>{{ flight.Dep_time }}</td>
+						<td>{{ flight.Seat }}</td>
+						<!--Make it so this cancels flight-->
+						<td>
+							<button class="cancel-btn" data-booking-id="{{ flight.Booking_ID }}">Cancel</button>
+						</td>
+					</tr>
+					{% endfor %}
+				{% else %}
+					<tr>
+						<td colspan="5">
+							{% if 'user_id' in session %}
+								You haven't booked any flights yet.
+							{% else %}
+								Please log in to view your booked flights.
+							{% endif %}
+						</td>
+					</tr>
+				{% endif %}
 			</table>
-
-		</section><!--/.service-->
+		</section>
 		<!--service end-->
 
 

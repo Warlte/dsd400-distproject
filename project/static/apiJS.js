@@ -77,3 +77,14 @@ function fetchSeatsAndRedirect(flightId) {
     };
     xhr.send(JSON.stringify({ flight_id: flightId }));
 }
+
+// make it so it sends api request to cancel flight
+
+document.querySelectorAll('.cancel-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        const bookingId = this.getAttribute('data-booking-id');
+        // Send AJAX request to cancel booking
+        console.log(bookingId)
+    });
+});
+
