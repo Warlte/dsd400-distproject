@@ -80,11 +80,50 @@ function fetchSeatsAndRedirect(flightId) {
 
 // make it so it sends api request to cancel flight
 
-document.querySelectorAll('.cancel-btn').forEach(button => {
-    button.addEventListener('click', function() {
-        const bookingId = this.getAttribute('data-booking-id');
-        // Send AJAX request to cancel booking
-        console.log(bookingId)
-    });
-});
+// Add this function to handle cancellation
+function cancelBooking(bookingId) {
+    if (!confirm("Are you sure you want to cancel this booking?")) {
+        return;
+    }
 
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/cancelBooking", true);
+    xhr.setRequestHeader("Content-Type", "application/json");
+    
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+                var response = JSON.parse(xhr.responseText);
+                if (response.success) {
+                    alert("Booking cancelled successfully!");
+                    // Refresh the page to update the bookings list
+                    window.location.reload();
+                } else {
+                    alert("Failed to cancel booking: " + (response.error || "Unknown error"));
+                }
+            } else {
+                try {
+                    var errorResponse = JSON.parse(xhr.responseText);
+                    alert("Failed to cancel booking: " + (errorResponse.error || "Server error"));
+                } catch (e) {
+                    alert("Failed to cancel booking: Server error");
+                }
+            }
+        }
+    };
+    
+    xhr.send(JSON.stringify({ booking_id: bookingId }));
+}
+
+// Update your event listener setup
+function setupCancelButtons() {
+    document.querySelectorAll('.cancel-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const bookingId = this.getAttribute('data-booking-id');
+            cancelBooking(bookingId);
+        });
+    });
+}
+
+// Call this after loading the bookings table
+setupCancelButtons();

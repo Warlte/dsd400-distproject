@@ -125,7 +125,29 @@ def fetch_booked_flights(user_id):
             return booked_flights
     except Exception as e:
         return {"error": str(e)}
-
+    
+def cancelBooking(bokingID):
+    try:
+        with connection.cursor() as cursor:
+            # First verify the booking belongs to this user
+            sql = "SELECT Customer_ID FROM Booking WHERE Booking_ID = %s"
+            cursor.execute(sql, (bokingID,))
+            booking = cursor.fetchone()
+            
+            if not booking:
+                return {"error": "Booking not found"}, 404
+                
+            if booking['Customer_ID'] != session['user_id']:
+                return {"error": "Not authorized to cancel this booking"}, 403
+                
+            # Delete the booking
+            sql = "DELETE FROM Booking WHERE Booking_ID = %s"
+            cursor.execute(sql, (bokingID,))
+            connection.commit()
+            
+            return {"success": True, "message": "Booking cancelled"}
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 
@@ -297,6 +319,16 @@ def fetchFlights():
 def book_flight():
     data = request.json
     return jsonify(bookFlight(data.get("flight_id"), data.get("user_id")))
+
+@app.route('/api/cancelBooking', methods=['POST'])
+def cancel_Booking():
+    if 'user_id' not in session:
+        return jsonify({"error": "how wtf you are not suposed to be able to se this"}), 401
+    data = request.json
+    booking_id = data.get("booking_id")
+    return cancelBooking(booking_id)
+
+
 
 
 if __name__ == '__main__':
