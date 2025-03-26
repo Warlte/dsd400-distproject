@@ -4,62 +4,56 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Book Seats</title>
-    <style>
-        .seat-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin: 20px 0;
-        }
-        .seat-checkbox {
-            display: none;
-        }
-        .seat-label {
-            display: inline-block;
-            width: 60px;
-            height: 60px;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            text-align: center;
-            line-height: 60px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .seat-checkbox:checked + .seat-label {
-            background-color: #4CAF50;
-            color: white;
-            border-color: #4CAF50;
-        }
-        .seat-label.taken {
-            background-color: #f44336;
-            color: white;
-            cursor: not-allowed;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='bookseats.css') }}">
 </head>
 <body>
     <h1>Book Seats</h1>
-    <p>Number of available seats: {{ seats }}</p>
-    <form action="/submit-booking" method="POST">
+    <p>Flight ID: {{ flight_id }}</p>
+    <p>Total seats: {{ seats }}</p>
+    
+    <form id="booking-form" action="/submit-booking" method="POST">
         <input type="hidden" name="flight_id" value="{{ flight_id }}">
         
         <h2>Select Seats:</h2>
         <div class="seat-container">
             {% for seat_number in range(1, seats + 1) %}
                 {% if seat_number in booked_seats %}
-                    <span class="seat-label taken">Seat {{ seat_number }}</span>
+                    <div class="seat booked" title="Already booked">
+                        {{ seat_number }}
+                    </div>
                 {% else %}
-                    <input type="checkbox" 
-                           class="seat-checkbox" 
-                           id="seat-{{ seat_number }}" 
-                           name="selected_seats" 
-                           value="{{ seat_number }}">
-                    <label for="seat-{{ seat_number }}" class="seat-label">Seat {{ seat_number }}</label>
+                    <label>
+                        <input type="checkbox" name="selected_seats" value="{{ seat_number }}">
+                        <div class="seat">
+                            {{ seat_number }}
+                        </div>
+                    </label>
                 {% endif %}
             {% endfor %}
         </div>
-        <br><br>
-        <button type="submit">Submit Booking</button>
+        
+        <button type="submit">Confirm Booking</button>
     </form>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('booking-form');
+            
+            // Handle form submission
+            form.addEventListener('submit', function(e) {
+                const selectedSeats = Array.from(document.querySelectorAll('input[name="selected_seats"]:checked'))
+                    .map(checkbox => checkbox.value);
+                
+                if (selectedSeats.length === 0) {
+                    e.preventDefault();
+                    alert('Please select at least one seat');
+                    return;
+                }
+                
+                // For debugging - can be removed
+                console.log('Submitting seats:', selectedSeats);
+            });
+        });
+    </script>
 </body>
 </html>

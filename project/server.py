@@ -1,13 +1,13 @@
 from functools import wraps
 from flask import Flask, redirect, request, jsonify, render_template, url_for, session
 import pymysql.cursors
-import bcrypt  # For password hashing
+import bcrypt  # För password hashing
 
 # pip install flask
 # pip install bcrypt
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here'  # Replace with a secure secret key
+app.secret_key = 'your_secret_key_here' #tänkte byta secret key men orkish inte
 
 connection = pymysql.connect(
     host='database-2.cx8goywsq9y4.eu-north-1.rds.amazonaws.com',
@@ -63,15 +63,6 @@ def registerUser(firstName, lastName, telefon, email, password):
     except Exception as e:
         return {"error": str(e)}
 
-def bookFlight(flight_id, user_id):
-    try:
-        with connection.cursor() as cursor:
-            sql = "INSERT INTO Booking (Customer_ID, Flight_ID) VALUES (%s, %s)"
-            cursor.execute(sql, (user_id, flight_id))
-            connection.commit()
-            return {"message": f"User {user_id} booked flight {flight_id} successfully."}
-    except Exception as e:
-        return {"error": str(e)}
 
 def login_required(f):
     @wraps(f)
@@ -271,10 +262,10 @@ def show_book_seats():
     booked_seats = []
     try:
         with connection.cursor() as cursor:
-            sql = "SELECT Seat_Number FROM Booking WHERE Flight_ID = %s"
+            sql = "SELECT Seat FROM Booking WHERE Flight_ID = %s"
             cursor.execute(sql, (flight_id,))
             results = cursor.fetchall()
-            booked_seats = [str(seat['Seat_Number']) for seat in results]
+            booked_seats = [seat['Seat'] for seat in results]  # Get actual seat numbers
     except Exception as e:
         print(f"Error fetching booked seats: {str(e)}")
     
@@ -322,7 +313,9 @@ def submit_booking():
         return redirect(url_for('login'))
     
     selected_seats = request.form.getlist('selected_seats')
-    flight_id = request.args.get('flight_id')  # You'll need to pass this from the previous page
+    flight_id = request.form.get('flight_id')
+    
+    print(f"Received booking request - Flight: {flight_id}, Seats: {selected_seats}")  # Debug
     
     if not selected_seats:
         return "No seats selected", 400
@@ -330,24 +323,27 @@ def submit_booking():
     try:
         with connection.cursor() as cursor:
             for seat in selected_seats:
-                # Check if seat is already booked
-                sql_check = "SELECT * FROM Booking WHERE Flight_ID = %s AND Seat = %s"
-                cursor.execute(sql_check, (flight_id, seat))
+                # Check if seat is already booked (prevent race condition)
+                cursor.execute("""
+                    SELECT * FROM Booking 
+                    WHERE Flight_ID = %s AND Seat = %s
+                """, (flight_id, seat))
                 if cursor.fetchone():
-                    return f"Seat {seat} is already booked", 400
+                    return f"Seat {seat} was just booked by someone else", 400
                 
                 # Insert booking
-                sql_insert = """
-                INSERT INTO Booking (Customer_ID, Flight_ID, Seat) 
-                VALUES (%s, %s, %s, NOW())
-                """
-                cursor.execute(sql_insert, (session['user_id'], flight_id, seat))
+                cursor.execute("""
+                    INSERT INTO Booking (Customer_ID, Flight_ID, Seat)
+                    VALUES (%s, %s, %s)
+                """, (session['user_id'], flight_id, seat))
             
             connection.commit()
             return redirect(url_for('index', message="Booking successful!"))
             
     except Exception as e:
+        print(f"Booking error: {str(e)}")  # Debug
         return f"Error creating bookings: {str(e)}", 500
+    
 @app.route('/api/getBookings', methods=['GET'])
 def get_bookings():
     return jsonify(getAllBookings())
@@ -356,11 +352,6 @@ def get_bookings():
 def fetchFlights():
     print("jag tog actually emot medelandet")
     return jsonify(fillFlights())
-
-@app.route('/api/bookFlight', methods=['POST'])
-def book_flight():
-    data = request.json
-    return jsonify(bookFlight(data.get("flight_id"), data.get("user_id")))
 
 @app.route('/api/cancelBooking', methods=['POST'])
 def cancel_Booking():
