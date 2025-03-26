@@ -63,18 +63,35 @@ function fetchSeatsAndRedirect(flightId) {
     xhr.open("POST", "/api/getSeats", true);
     xhr.setRequestHeader("Content-Type", "application/json");
     xhr.onreadystatechange = function() {
-        if (xhr.readyState === 4 && xhr.status === 200) {
-            var response = JSON.parse(xhr.responseText);
-            if (response.seats) {
-                // Redirect to the bookseats.html page with the number of seats as a query parameter
-                window.location.href = `/bookseats?seats=${response.seats}`;
+        if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+                try {
+                    var response = JSON.parse(xhr.responseText);
+                    if (response.seats) {
+                        // Redirect with both seats and flight_id
+                        window.location.href = `/bookseats?seats=${response.seats}&flight_id=${flightId}`;
+                    } else {
+                        alert("Failed to fetch seat information: " + (response.error || "Unknown error"));
+                    }
+                } catch (e) {
+                    console.error("Error parsing response:", e);
+                    alert("Failed to process server response");
+                }
             } else {
-                alert("Failed to fetch seat information: " + response.error);
+                try {
+                    var errorResponse = JSON.parse(xhr.responseText);
+                    alert("Error: " + (errorResponse.error || "Server returned status " + xhr.status));
+                } catch (e) {
+                    alert("Failed to fetch seat information. Please try again.");
+                }
             }
-        } else if (xhr.readyState === 4) {
-            alert("Failed to fetch seat information: " + xhr.responseText);
         }
     };
+    
+    xhr.onerror = function() {
+        alert("Network error occurred. Please check your connection.");
+    };
+    
     xhr.send(JSON.stringify({ flight_id: flightId }));
 }
 

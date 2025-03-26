@@ -1,13 +1,13 @@
 from functools import wraps
 from flask import Flask, redirect, request, jsonify, render_template, url_for, session
 import pymysql.cursors
-import bcrypt  # For password hashing
+import bcrypt  # För password hashing
 
 # pip install flask
 # pip install bcrypt
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here'  # Replace with a secure secret key
+app.secret_key = 'your_secret_key_here' #tänkte byta secret key men orkish inte
 
 connection = pymysql.connect(
     host='database-2.cx8goywsq9y4.eu-north-1.rds.amazonaws.com',
@@ -63,15 +63,6 @@ def registerUser(firstName, lastName, telefon, email, password):
     except Exception as e:
         return {"error": str(e)}
 
-def bookFlight(flight_id, user_id):
-    try:
-        with connection.cursor() as cursor:
-            sql = "INSERT INTO Booking (Customer_ID, Flight_ID) VALUES (%s, %s)"
-            cursor.execute(sql, (user_id, flight_id))
-            connection.commit()
-            return {"message": f"User {user_id} booked flight {flight_id} successfully."}
-    except Exception as e:
-        return {"error": str(e)}
 
 def login_required(f):
     @wraps(f)
@@ -259,13 +250,29 @@ def logout():
     return redirect(url_for('login'))
 
 @app.route('/bookseats')
-def book_seats():
-    seats = request.args.get("seats")
-    if seats is not None and seats.isdigit():  # Check if seats is a valid number
-        seats = int(seats)  # Convert to integer
-    else:
-        return "Invalid number of seats", 400  # Return an error if seats is not a valid number
-    return render_template('bookSeats.html', seats=seats)
+@login_required
+def show_book_seats():
+    flight_id = request.args.get('flight_id')
+    seats = request.args.get('seats')
+    
+    if not flight_id or not seats or not seats.isdigit():
+        return "Invalid request", 400
+        
+    # Get already booked seats for this flight
+    booked_seats = []
+    try:
+        with connection.cursor() as cursor:
+            sql = "SELECT Seat FROM Booking WHERE Flight_ID = %s"
+            cursor.execute(sql, (flight_id,))
+            results = cursor.fetchall()
+            booked_seats = [seat['Seat'] for seat in results]  # Get actual seat numbers
+    except Exception as e:
+        print(f"Error fetching booked seats: {str(e)}")
+    
+    return render_template('bookSeats.html',
+                         seats=int(seats),
+                         flight_id=flight_id,
+                         booked_seats=booked_seats)
 
 @app.route('/api/getSeats', methods=['POST'])
 def get_seats():
@@ -300,12 +307,43 @@ def get_users():
     return jsonify(getAllUsers())
 
 @app.route('/submit-booking', methods=['POST'])
+@login_required
 def submit_booking():
-    selected_seats = request.form.getlist('selected_seats')  # Get all selected seats
-    print(f"Selected seats: {selected_seats}")  # Debugging: Print selected seats
-    # Add your logic here to save the selected seats to the database
-    return redirect('index.html')  # Redirect to the homepage or a confirmation page
-
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    selected_seats = request.form.getlist('selected_seats')
+    flight_id = request.form.get('flight_id')
+    
+    print(f"Received booking request - Flight: {flight_id}, Seats: {selected_seats}")  # Debug
+    
+    if not selected_seats:
+        return "No seats selected", 400
+        
+    try:
+        with connection.cursor() as cursor:
+            for seat in selected_seats:
+                # Check if seat is already booked (prevent race condition)
+                cursor.execute("""
+                    SELECT * FROM Booking 
+                    WHERE Flight_ID = %s AND Seat = %s
+                """, (flight_id, seat))
+                if cursor.fetchone():
+                    return f"Seat {seat} was just booked by someone else", 400
+                
+                # Insert booking
+                cursor.execute("""
+                    INSERT INTO Booking (Customer_ID, Flight_ID, Seat)
+                    VALUES (%s, %s, %s)
+                """, (session['user_id'], flight_id, seat))
+            
+            connection.commit()
+            return redirect(url_for('index', message="Booking successful!"))
+            
+    except Exception as e:
+        print(f"Booking error: {str(e)}")  # Debug
+        return f"Error creating bookings: {str(e)}", 500
+    
 @app.route('/api/getBookings', methods=['GET'])
 def get_bookings():
     return jsonify(getAllBookings())
@@ -314,11 +352,6 @@ def get_bookings():
 def fetchFlights():
     print("jag tog actually emot medelandet")
     return jsonify(fillFlights())
-
-@app.route('/api/bookFlight', methods=['POST'])
-def book_flight():
-    data = request.json
-    return jsonify(bookFlight(data.get("flight_id"), data.get("user_id")))
 
 @app.route('/api/cancelBooking', methods=['POST'])
 def cancel_Booking():

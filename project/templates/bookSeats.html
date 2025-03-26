@@ -4,25 +4,56 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Book Seats</title>
-    <style>
-        .seat-checkbox {
-            margin: 5px;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='bookseats.css') }}">
 </head>
 <body>
     <h1>Book Seats</h1>
-    <p>Number of available seats: {{ seats }}</p>
-    <form action="/submit-booking" method="POST">
+    <p>Flight ID: {{ flight_id }}</p>
+    <p>Total seats: {{ seats }}</p>
+    
+    <form id="booking-form" action="/submit-booking" method="POST">
+        <input type="hidden" name="flight_id" value="{{ flight_id }}">
+        
         <h2>Select Seats:</h2>
-        {% for seat_number in range(1, seats + 1) %}
-            <label class="seat-checkbox">
-                <input type="checkbox" name="selected_seats" value="{{ seat_number }}">
-                Seat {{ seat_number }}
-            </label>
-        {% endfor %}
-        <br><br>
-        <button type="submit">Submit Booking</button>
+        <div class="seat-container">
+            {% for seat_number in range(1, seats + 1) %}
+                {% if seat_number in booked_seats %}
+                    <div class="seat booked" title="Already booked">
+                        {{ seat_number }}
+                    </div>
+                {% else %}
+                    <label>
+                        <input type="checkbox" name="selected_seats" value="{{ seat_number }}">
+                        <div class="seat">
+                            {{ seat_number }}
+                        </div>
+                    </label>
+                {% endif %}
+            {% endfor %}
+        </div>
+        
+        <button type="submit">Confirm Booking</button>
     </form>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('booking-form');
+            
+            // Handle form submission
+            form.addEventListener('submit', function(e) {
+                const selectedSeats = Array.from(document.querySelectorAll('input[name="selected_seats"]:checked'))
+                    .map(checkbox => checkbox.value);
+                
+                if (selectedSeats.length === 0) {
+                    e.preventDefault();
+                    alert('Please select at least one seat');
+                    return;
+                }
+                
+                // For debugging - can be removed
+                console.log('Submitting seats:', selectedSeats);
+            });
+        });
+    </script>
 </body>
 </html>
