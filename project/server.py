@@ -1,4 +1,5 @@
-from flask import Flask, redirect, request, jsonify, render_template
+from functools import wraps
+from flask import Flask, redirect, request, jsonify, render_template, url_for, session
 import pymysql.cursors
 import bcrypt  # For password hashing
 
@@ -6,6 +7,7 @@ import bcrypt  # For password hashing
 # pip install bcrypt
 
 app = Flask(__name__)
+app.secret_key = 'your_secret_key_here'  # Replace with a secure secret key
 
 connection = pymysql.connect(
     host='database-2.cx8goywsq9y4.eu-north-1.rds.amazonaws.com',
@@ -30,6 +32,14 @@ def getAllBookings():
     with connection.cursor() as cursor:
         cursor.execute("SELECT * FROM Booking")
         return cursor.fetchall()
+
+def doxuser():
+    with connection.cursor() as cursor:
+        sql = "SELECT Firstname FROM Customers WHERE Customer_ID = %s"
+        cursor.execute(sql, (session['user_id'],))
+        user = cursor.fetchone()
+        return user
+
 
 def postToBookDB(name, author, genre):
     try:
@@ -63,6 +73,13 @@ def bookFlight(flight_id, user_id):
     except Exception as e:
         return {"error": str(e)}
 
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))  # Redirect to login page if not logged in
+        return f(*args, **kwargs)
+    return decorated_function
 '''
 def fillFlights():
     try:
@@ -92,24 +109,154 @@ def fillFlights():
     except Exception as e:
         return {"error": str(e)}
 
-def loginUser(email, password):
+def fetch_booked_flights(user_id):
     try:
+        with connection.cursor() as cursor:
+            sql = """
+            SELECT Flights.Flight_ID, Flights.Destination, Flights.Dep_time, Airplanes.Company, Booking.Seat, Booking.Booking_ID, Airport.Airport_name 
+            FROM Booking 
+            INNER JOIN Flights ON Booking.Flight_ID = Flights.Flight_ID 
+            INNER JOIN Airplanes ON Flights.Plane_ID = Airplanes.Plane_ID 
+            INNER JOIN Airport ON Flights.Start_ID = Airport.Airport_ID 
+            WHERE Booking.Customer_ID = %s
+            """
+            cursor.execute(sql, (user_id,))
+            booked_flights = cursor.fetchall()
+            return booked_flights
+    except Exception as e:
+        return {"error": str(e)}
+    
+def cancelBooking(bokingID):
+    try:
+        with connection.cursor() as cursor:
+            # First verify the booking belongs to this user
+            sql = "SELECT Customer_ID FROM Booking WHERE Booking_ID = %s"
+            cursor.execute(sql, (bokingID,))
+            booking = cursor.fetchone()
+            
+            if not booking:
+                return {"error": "Booking not found"}, 404
+                
+            if booking['Customer_ID'] != session['user_id']:
+                return {"error": "Not authorized to cancel this booking"}, 403
+                
+            # Delete the booking
+            sql = "DELETE FROM Booking WHERE Booking_ID = %s"
+            cursor.execute(sql, (bokingID,))
+            connection.commit()
+            
+            return {"success": True, "message": "Booking cancelled"}
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
+
+@app.route('/')
+def index():
+    user_name = None
+    booked_flights = None
+    if 'user_id' in  session:
+        user = doxuser()
+        booked_flights = fetch_booked_flights(session['user_id'])
+        if user:
+            user_name = user['Firstname']
+    return render_template('index.html', user_name = user_name, booked_flights = booked_flights)
+
+@app.route('/')
+def login_page():
+    return render_template('login.html')
+
+@app.route('/')
+def register_page():
+    return render_template('register.html')
+
+
+@app.route('/my-flights')
+@login_required
+def my_flights():
+    user_id = session['user_id']  # Get the logged-in user's ID from the session
+    booked_flights = fetch_booked_flights(user_id)  # Fetch booked flights for the user
+
+    if isinstance(booked_flights, dict) and "error" in booked_flights:
+        return booked_flights["error"], 500  # Return error if something went wrong
+
+    return render_template('my_flights.html', flights=booked_flights)
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+
+        # Fetch user from the database
         with connection.cursor() as cursor:
             sql = "SELECT * FROM Customers WHERE Email = %s"
             cursor.execute(sql, (email,))
             user = cursor.fetchone()
-            if user and bcrypt.checkpw(password.encode('utf-8'), user['Password'].encode('utf-8')):
-                return {"message": "Login successful", "user": user}
+
+        # Validate user and password
+        if user:
+            # Ensure the stored password is in bytes
+            stored_password = user['Password'].encode('utf-8')  # Encode to bytes
+            if bcrypt.checkpw(password.encode('utf-8'), stored_password):
+                # Store user ID in the session
+                session['user_id'] = user['Customer_ID']
+                session['email'] = user['Email']
+                print(f"Logged in as {session['user_id']}, with the email {session['email']}")
+                return redirect(url_for('index'))  # Redirect to a dashboard or home page
             else:
-                return {"error": "Invalid email or password"}
-    except Exception as e:
-        return {"error": str(e)}
-      
+                return "Invalid email or password", 401  # Return an error message
+        else:
+            return "User not found", 404
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+    # Render the login page for GET requests
+    return render_template('login.html')
 
+@app.route('/register', methods=['GET', 'POST'])
+def register_user():
+    if request.method == 'POST':
+        firstName = request.form.get('firstName')
+        lastName = request.form.get('lastName')
+        telefon = request.form.get('telefon')
+        email = request.form.get('email')
+        password = request.form.get('password')
+
+        # Hash the password
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        hashed_password_str = hashed_password.decode('utf-8')  # Convert to string for storage
+
+        # Insert user into the database
+        with connection.cursor() as cursor:
+            sql = "INSERT INTO Customers (FirstName, LastName, Telephone, Email, Password) VALUES (%s, %s, %s, %s, %s)"
+            cursor.execute(sql, (firstName, lastName, telefon, email, hashed_password_str))
+            connection.commit()
+
+        return redirect(url_for('login'))  # Redirect to login after registration
+
+    return render_template('register.html')
+
+@app.route('/dashboard')
+def dashboard():
+    # Check if the user is logged in
+    if 'user_id' not in session:
+        return redirect(url_for('login'))  # Redirect to login if not authenticated
+
+    # Fetch user details from the database
+    with connection.cursor() as cursor:
+        sql = "SELECT * FROM Customers WHERE Customer_ID = %s"
+        cursor.execute(sql, (session['user_id'],))
+        user = cursor.fetchone()
+
+    return render_template('dashboard.html', user=user)
+
+@app.route('/logout')
+@login_required
+def logout():
+    # Clear the session
+    session.pop('user_id', None)
+    session.pop('email', None)
+    return redirect(url_for('login'))
 
 @app.route('/bookseats')
 def book_seats():
@@ -173,10 +320,16 @@ def book_flight():
     data = request.json
     return jsonify(bookFlight(data.get("flight_id"), data.get("user_id")))
 
-@app.route('/api/register', methods=['POST'])
-def register_user():
+@app.route('/api/cancelBooking', methods=['POST'])
+def cancel_Booking():
+    if 'user_id' not in session:
+        return jsonify({"error": "how wtf you are not suposed to be able to se this"}), 401
     data = request.json
-    return jsonify(registerUser(data.get("firstName"), data.get("lastName"), data.get("telefon"), data.get("email"), data.get("password")))
+    booking_id = data.get("booking_id")
+    return cancelBooking(booking_id)
+
+
+
 
 if __name__ == '__main__':
     app.run(host='localhost', port=8020, debug=True)
