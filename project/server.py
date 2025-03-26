@@ -259,13 +259,29 @@ def logout():
     return redirect(url_for('login'))
 
 @app.route('/bookseats')
-def book_seats():
-    seats = request.args.get("seats")
-    if seats is not None and seats.isdigit():  # Check if seats is a valid number
-        seats = int(seats)  # Convert to integer
-    else:
-        return "Invalid number of seats", 400  # Return an error if seats is not a valid number
-    return render_template('bookSeats.html', seats=seats)
+@login_required
+def show_book_seats():
+    flight_id = request.args.get('flight_id')
+    seats = request.args.get('seats')
+    
+    if not flight_id or not seats or not seats.isdigit():
+        return "Invalid request", 400
+        
+    # Get already booked seats for this flight
+    booked_seats = []
+    try:
+        with connection.cursor() as cursor:
+            sql = "SELECT Seat_Number FROM Booking WHERE Flight_ID = %s"
+            cursor.execute(sql, (flight_id,))
+            results = cursor.fetchall()
+            booked_seats = [str(seat['Seat_Number']) for seat in results]
+    except Exception as e:
+        print(f"Error fetching booked seats: {str(e)}")
+    
+    return render_template('bookSeats.html',
+                         seats=int(seats),
+                         flight_id=flight_id,
+                         booked_seats=booked_seats)
 
 @app.route('/api/getSeats', methods=['POST'])
 def get_seats():
@@ -300,12 +316,38 @@ def get_users():
     return jsonify(getAllUsers())
 
 @app.route('/submit-booking', methods=['POST'])
+@login_required
 def submit_booking():
-    selected_seats = request.form.getlist('selected_seats')  # Get all selected seats
-    print(f"Selected seats: {selected_seats}")  # Debugging: Print selected seats
-    # Add your logic here to save the selected seats to the database
-    return redirect('index.html')  # Redirect to the homepage or a confirmation page
-
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    selected_seats = request.form.getlist('selected_seats')
+    flight_id = request.args.get('flight_id')  # You'll need to pass this from the previous page
+    
+    if not selected_seats:
+        return "No seats selected", 400
+        
+    try:
+        with connection.cursor() as cursor:
+            for seat in selected_seats:
+                # Check if seat is already booked
+                sql_check = "SELECT * FROM Booking WHERE Flight_ID = %s AND Seat = %s"
+                cursor.execute(sql_check, (flight_id, seat))
+                if cursor.fetchone():
+                    return f"Seat {seat} is already booked", 400
+                
+                # Insert booking
+                sql_insert = """
+                INSERT INTO Booking (Customer_ID, Flight_ID, Seat) 
+                VALUES (%s, %s, %s, NOW())
+                """
+                cursor.execute(sql_insert, (session['user_id'], flight_id, seat))
+            
+            connection.commit()
+            return redirect(url_for('index', message="Booking successful!"))
+            
+    except Exception as e:
+        return f"Error creating bookings: {str(e)}", 500
 @app.route('/api/getBookings', methods=['GET'])
 def get_bookings():
     return jsonify(getAllBookings())
