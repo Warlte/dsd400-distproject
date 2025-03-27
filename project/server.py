@@ -213,15 +213,27 @@ def register_user():
         email = request.form.get('email')
         password = request.form.get('password')
 
+        # First check if email already exists
+        with connection.cursor() as cursor:
+            sql = "SELECT Email FROM Customers WHERE Email = %s"
+            cursor.execute(sql, (email,))
+            existing_user = cursor.fetchone()
+            
+            if existing_user:
+                return "Email address is already registered", 400
+
         # Hash the password
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
         hashed_password_str = hashed_password.decode('utf-8')  # Convert to string for storage
 
         # Insert user into the database
-        with connection.cursor() as cursor:
-            sql = "INSERT INTO Customers (FirstName, LastName, Telephone, Email, Password) VALUES (%s, %s, %s, %s, %s)"
-            cursor.execute(sql, (firstName, lastName, telefon, email, hashed_password_str))
-            connection.commit()
+        try:
+            with connection.cursor() as cursor:
+                sql = "INSERT INTO Customers (FirstName, LastName, Telephone, Email, Password) VALUES (%s, %s, %s, %s, %s)"
+                cursor.execute(sql, (firstName, lastName, telefon, email, hashed_password_str))
+                connection.commit()
+        except Exception as e:
+            return f"Error during registration: {str(e)}", 500
 
         return redirect(url_for('login'))  # Redirect to login after registration
 
