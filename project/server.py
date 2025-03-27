@@ -53,7 +53,7 @@ def postToBookDB(name, author, genre):
 
 def registerUser(firstName, lastName, telefon, email, password):
     try:
-        # Hash the password before storing it
+
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
         with connection.cursor() as cursor:
             sql = "INSERT INTO Customers (FirstName, LastName, Telephone, Email, Password) VALUES (%s, %s, %s, %s, %s)"
@@ -68,22 +68,10 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
-            return redirect(url_for('login'))  # Redirect to login page if not logged in
+            return redirect(url_for('login')) 
         return f(*args, **kwargs)
     return decorated_function
-'''
-def fillFlights():
-    try:
-        with connection.cursor() as cursor:
-            #sql kod kommer att göra mig galen
-            sql = "SELECT Flights.Destination, Flights.Dep_time, Airplanes.Company, Airplanes.Seats, Airport.Airport_name FROM ((Flights INNER JOIN Airport ON Flights.Plane_ID = Airplane.Plane_ID) INNER JOIN Airport ON Fligts.Start_ID = Airport.Airport_ID)"
-            hej = cursor.execute(sql)
-            print(hej)
-            print("du borde ha fått en json")
-            return hej
-    except Exception as e:
-        return {"error":str(e)}
-'''
+
 def fillFlights():
     try:
         with connection.cursor() as cursor:
@@ -120,7 +108,7 @@ def fetch_booked_flights(user_id):
 def cancelBooking(bokingID):
     try:
         with connection.cursor() as cursor:
-            # First verify the booking belongs to this user
+
             sql = "SELECT Customer_ID FROM Booking WHERE Booking_ID = %s"
             cursor.execute(sql, (bokingID,))
             booking = cursor.fetchone()
@@ -131,7 +119,7 @@ def cancelBooking(bokingID):
             if booking['Customer_ID'] != session['user_id']:
                 return {"error": "Not authorized to cancel this booking"}, 403
                 
-            # Delete the booking
+
             sql = "DELETE FROM Booking WHERE Booking_ID = %s"
             cursor.execute(sql, (bokingID,))
             connection.commit()
@@ -166,11 +154,11 @@ def register_page():
 @app.route('/my-flights')
 @login_required
 def my_flights():
-    user_id = session['user_id']  # Get the logged-in user's ID from the session
-    booked_flights = fetch_booked_flights(user_id)  # Fetch booked flights for the user
+    user_id = session['user_id']  
+    booked_flights = fetch_booked_flights(user_id)  
 
     if isinstance(booked_flights, dict) and "error" in booked_flights:
-        return booked_flights["error"], 500  # Return error if something went wrong
+        return booked_flights["error"], 500  
 
     return render_template('my_flights.html', flights=booked_flights)
 
@@ -180,28 +168,27 @@ def login():
         email = request.form.get('email')
         password = request.form.get('password')
 
-        # Fetch user from the database
+
         with connection.cursor() as cursor:
             sql = "SELECT * FROM Customers WHERE Email = %s"
             cursor.execute(sql, (email,))
             user = cursor.fetchone()
 
-        # Validate user and password
+
         if user:
-            # Ensure the stored password is in bytes
-            stored_password = user['Password'].encode('utf-8')  # Encode to bytes
+
+            stored_password = user['Password'].encode('utf-8') 
             if bcrypt.checkpw(password.encode('utf-8'), stored_password):
-                # Store user ID in the session
+
                 session['user_id'] = user['Customer_ID']
                 session['email'] = user['Email']
                 print(f"Logged in as {session['user_id']}, with the email {session['email']}")
-                return redirect(url_for('index'))  # Redirect to a dashboard or home page
+                return redirect(url_for('index'))  
             else:
-                return "Invalid email or password", 401  # Return an error message
+                return "Invalid email or password", 401  
         else:
             return "User not found", 404
 
-    # Render the login page for GET requests
     return render_template('login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -213,7 +200,6 @@ def register_user():
         email = request.form.get('email')
         password = request.form.get('password')
 
-        # First check if email already exists
         with connection.cursor() as cursor:
             sql = "SELECT Email FROM Customers WHERE Email = %s"
             cursor.execute(sql, (email,))
@@ -222,11 +208,9 @@ def register_user():
             if existing_user:
                 return "Email address is already registered", 400
 
-        # Hash the password
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-        hashed_password_str = hashed_password.decode('utf-8')  # Convert to string for storage
+        hashed_password_str = hashed_password.decode('utf-8') 
 
-        # Insert user into the database
         try:
             with connection.cursor() as cursor:
                 sql = "INSERT INTO Customers (FirstName, LastName, Telephone, Email, Password) VALUES (%s, %s, %s, %s, %s)"
@@ -235,17 +219,15 @@ def register_user():
         except Exception as e:
             return f"Error during registration: {str(e)}", 500
 
-        return redirect(url_for('login'))  # Redirect to login after registration
+        return redirect(url_for('login')) 
 
     return render_template('register.html')
 
 @app.route('/dashboard')
 def dashboard():
-    # Check if the user is logged in
     if 'user_id' not in session:
-        return redirect(url_for('login'))  # Redirect to login if not authenticated
+        return redirect(url_for('login')) 
 
-    # Fetch user details from the database
     with connection.cursor() as cursor:
         sql = "SELECT * FROM Customers WHERE Customer_ID = %s"
         cursor.execute(sql, (session['user_id'],))
@@ -256,7 +238,6 @@ def dashboard():
 @app.route('/logout')
 @login_required
 def logout():
-    # Clear the session
     session.pop('user_id', None)
     session.pop('email', None)
     return redirect(url_for('login'))
@@ -270,14 +251,13 @@ def show_book_seats():
     if not flight_id or not seats or not seats.isdigit():
         return "Invalid request", 400
         
-    # Get already booked seats for this flight
     booked_seats = []
     try:
         with connection.cursor() as cursor:
             sql = "SELECT Seat FROM Booking WHERE Flight_ID = %s"
             cursor.execute(sql, (flight_id,))
             results = cursor.fetchall()
-            booked_seats = [seat['Seat'] for seat in results]  # Get actual seat numbers
+            booked_seats = [seat['Seat'] for seat in results] 
     except Exception as e:
         print(f"Error fetching booked seats: {str(e)}")
     
@@ -302,18 +282,6 @@ def get_seats():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-'''
-
-@app.route('/api/getFlights', methods=['GET'])
-def get_flights():
-    return jsonify(fetchFlightsDB())
-
-@app.route('/api/getSeats', methods=['POST'])
-def getflights():
-    data = request.json
-    return jsonify(get_seats(data.get("flight_id")))
-'''
-
 @app.route('/api/getUsers', methods=['GET'])
 def get_users():
     return jsonify(getAllUsers())
@@ -335,15 +303,14 @@ def submit_booking():
     try:
         with connection.cursor() as cursor:
             for seat in selected_seats:
-                # Check if seat is already booked (prevent race condition)
+
                 cursor.execute("""
                     SELECT * FROM Booking 
                     WHERE Flight_ID = %s AND Seat = %s
                 """, (flight_id, seat))
                 if cursor.fetchone():
                     return f"Seat {seat} was just booked by someone else", 400
-                
-                # Insert booking
+
                 cursor.execute("""
                     INSERT INTO Booking (Customer_ID, Flight_ID, Seat)
                     VALUES (%s, %s, %s)
@@ -353,7 +320,7 @@ def submit_booking():
             return redirect(url_for('index', message="Booking successful!"))
             
     except Exception as e:
-        print(f"Booking error: {str(e)}")  # Debug
+        print(f"Booking error: {str(e)}") 
         return f"Error creating bookings: {str(e)}", 500
     
 @app.route('/api/getBookings', methods=['GET'])
