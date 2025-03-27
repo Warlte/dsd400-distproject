@@ -4,42 +4,203 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Book Seats</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='bookseats.css') }}">
+    <style>
+        *, *:before, *:after {
+            box-sizing: border-box;
+        }
+        
+        .plane {
+            margin: 20px auto;
+            max-width: 300px;
+        }
+        
+        .cockpit {
+            height: 50px;
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+            border-bottom: 5px solid #d8d8d8;
+        }
+        
+        .cockpit h1 {
+            margin: 10px auto;
+        }
+        
+        .exit {
+            position: relative;
+            height: 30px;
+            text-align: center;
+            font-size: 14px;
+            line-height: 30px;
+            background: green;
+            color: white;
+        }
+        
+        .fuselage {
+            border-right: 5px solid #d8d8d8;
+            border-left: 5px solid #d8d8d8;
+        }
+        
+        ol {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .seats {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            justify-content: flex-start;
+        }
+        
+        .seat {
+            display: flex;
+            flex: 0 0 14.28571428571429%;
+            padding: 5px;
+            position: relative;
+        }
+        
+        .seat:nth-child(3) {
+            margin-right: 14.28571428571429%;
+        }
+        
+        .seat input[type=checkbox] {
+            position: absolute;
+            opacity: 0;
+        }
+        
+        .seat input[type=checkbox]:checked + label {
+            background: #4CAF50;
+            animation-name: rubberBand;
+            animation-duration: 300ms;
+            animation-fill-mode: both;
+        }
+        
+        .seat input[type=checkbox]:disabled + label {
+            background: #f44336;
+            text-indent: -9999px;
+            overflow: hidden;
+        }
+        
+        .seat input[type=checkbox]:disabled + label:after {
+            content: "X";
+            text-indent: 0;
+            position: absolute;
+            top: 4px;
+            left: 50%;
+            transform: translate(-50%, 0%);
+            color: white;
+        }
+        
+        .seat input[type=checkbox]:disabled + label:hover {
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+        
+        .seat label {
+            display: block;
+            position: relative;
+            width: 100%;
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            line-height: 1.5rem;
+            padding: 4px 0;
+            background: #ddd;
+            border-radius: 5px;
+            animation-duration: 300ms;
+            animation-fill-mode: both;
+        }
+        
+        .seat label:before {
+            content: "";
+            position: absolute;
+            width: 75%;
+            height: 75%;
+            top: 1px;
+            left: 50%;
+            transform: translate(-50%, 0%);
+            background: rgba(255,255,255,.4);
+            border-radius: 3px;
+        }
+        
+        .seat label:hover {
+            cursor: pointer;
+            box-shadow: 0 0 0px 2px #5C6AFF;
+        }
+        
+        @keyframes rubberBand {
+            0% { transform: scale3d(1, 1, 1); }
+            30% { transform: scale3d(1.25, 0.75, 1); }
+            40% { transform: scale3d(0.75, 1.25, 1); }
+            50% { transform: scale3d(1.15, 0.85, 1); }
+            65% { transform: scale3d(.95, 1.05, 1); }
+            75% { transform: scale3d(1.05, .95, 1); }
+            100% { transform: scale3d(1, 1, 1); }
+        }
+        
+        .submit-btn {
+            text-align: center;
+            margin: 20px;
+        }
+        
+        button[type="submit"] {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Book Seats</h1>
-    <p>Flight ID: {{ flight_id }}</p>
-    <p>Total seats: {{ seats }}</p>
-    
-    <form id="booking-form" action="/submit-booking" method="POST">
-        <input type="hidden" name="flight_id" value="{{ flight_id }}">
-        
-        <h2>Select Seats:</h2>
-        <div class="seat-container">
-            {% for seat_number in range(1, seats + 1) %}
-                {% if seat_number in booked_seats %}
-                    <div class="seat booked" title="Already booked">
-                        {{ seat_number }}
-                    </div>
-                {% else %}
-                    <label>
-                        <input type="checkbox" name="selected_seats" value="{{ seat_number }}">
-                        <div class="seat">
-                            {{ seat_number }}
-                        </div>
-                    </label>
-                {% endif %}
-            {% endfor %}
+    <div class="plane">
+        <div class="cockpit">
+            <h1>Flight {{ flight_id }}</h1>
         </div>
+        <div class="exit exit--front fuselage"></div>
         
-        <button type="submit">Confirm Booking</button>
-    </form>
+        <form id="booking-form" action="/submit-booking" method="POST">
+            <input type="hidden" name="flight_id" value="{{ flight_id }}">
+            
+            <ol class="cabin fuselage">
+                {% set seats_per_row = 6 %}
+                {% for row in range(1, (seats//seats_per_row)+2) %}
+                <li class="row row--{{ row }}">
+                    <ol class="seats">
+                        {% for seat_num in range((row-1)*seats_per_row + 1, row*seats_per_row + 1) %}
+                            {% if seat_num <= seats %}
+                            <li class="seat">
+                                {% if seat_num in booked_seats %}
+                                    <input type="checkbox" disabled id="seat-{{ seat_num }}" />
+                                    <label for="seat-{{ seat_num }}">Occupied</label>
+                                {% else %}
+                                    <input type="checkbox" name="selected_seats" value="{{ seat_num }}" id="seat-{{ seat_num }}" />
+                                    <label for="seat-{{ seat_num }}">{{ seat_num }}</label>
+                                {% endif %}
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+                    </ol>
+                </li>
+                {% endfor %}
+            </ol>
+            
+            <div class="exit exit--back fuselage"></div>
+            
+            <div class="submit-btn">
+                <button type="submit">Confirm Selected Seats</button>
+            </div>
+        </form>
+    </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const form = document.getElementById('booking-form');
             
-            // Handle form submission
             form.addEventListener('submit', function(e) {
                 const selectedSeats = Array.from(document.querySelectorAll('input[name="selected_seats"]:checked'))
                     .map(checkbox => checkbox.value);
@@ -47,11 +208,9 @@
                 if (selectedSeats.length === 0) {
                     e.preventDefault();
                     alert('Please select at least one seat');
-                    return;
+                } else {
+                    console.log('Submitting seats:', selectedSeats);
                 }
-                
-                // For debugging - can be removed
-                console.log('Submitting seats:', selectedSeats);
             });
         });
     </script>
